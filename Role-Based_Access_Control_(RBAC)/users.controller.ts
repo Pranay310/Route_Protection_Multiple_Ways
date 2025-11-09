@@ -1,18 +1,40 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { Roles } from './roles.decorator';
-import { RolesGuard } from './roles.guard';
-import { JwtAuthGuard } from './jwt-auth.guard';
-@Controller('users')
+// src/users/users.controller.ts
+
+import { Controller, Get, Req } from '@nestjs/common';
+import { Roles } from '../auth/roles.decorator'; // decorator to mark required roles
+import { Role } from '../auth/roles.enum';       // allowed role values
+
+@Controller('users') // All routes here start with /users
 export class UsersController {
-  @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  findAll() {
-    return [{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }];
+  /**
+   * GET /users/me
+   * - Any authenticated user can access (no @Roles decorator)
+   * - JwtAuthGuard will have set req.user
+   */
+  @Get('me')
+  getMe(@Req() req: any) {
+    // Return the authenticated user payload
+    return req.user;
   }
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  getProfile() {
-    return { id: 1, name: 'John' };
+
+  /**
+   * GET /users/admin/overview
+   * - Only ADMINs can access
+   * - RolesGuard will verify req.user.roles contains Role.ADMIN
+   */
+  @Roles(Role.ADMIN)
+  @Get('admin/overview')
+  adminOverview() {
+    return { stats: 'Top-secret admin stats' };
+  }
+
+  /**
+   * GET /users/managed
+   * - Accessible by MANAGER or ADMIN (any of them)
+   */
+  @Roles(Role.MANAGER, Role.ADMIN)
+  @Get('managed')
+  managedArea() {
+    return { area: 'Manager/Admin shared zone' };
   }
 }
